@@ -1,0 +1,24 @@
+# Build
+dist/
+build/
+*.spec
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+pipeline-desk/dist/
+
+# Secrets
+config/models.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sessions (user data)
+sessions/
+
+# IDE
+.vscode/
+.idea/

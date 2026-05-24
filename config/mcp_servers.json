@@ -1,0 +1,30 @@
+{
+    "mcpServers": {
+        "freecad": {
+            "command": "D:\\MCP\\freecad-mcp\\.venv\\Scripts\\python.exe",
+            "args": ["D:\\MCP\\freecad-mcp\\main.py"]
+        },
+        "kicad": {
+            "command": "D:\\MCP\\kicad-mcp\\.venv\\Scripts\\python.exe",
+            "args": ["D:\\MCP\\kicad-mcp\\main.py"],
+            "env": {
+                "KICAD_SEARCH_PATHS": "C:/Users/q/Documents/KiCad"
+            }
+        },
+        "openfoam": {
+            "command": "D:\\MCP\\openfoam-mcp\\build\\openfoam-mcp-server",
+            "args": []
+        },
+        "mbdyn": {
+            "command": "C:\\Users\\q\\Documents\\PipelineDesk\\.venv\\Scripts\\python.exe",
+            "args": ["C:\\Users\\q\\Documents\\PipelineDesk\\MCP\\mbdyn-mcp\\mbdyn_mcp_server.py"]
+        },
+        "obsidian": {
+            "command": "D:\\MCP\\mcpvault\\mcpvault.exe",
+            "args": ["--vault", "C:\\Users\\q\\Documents\\PipelineDesk\\PipelineVault"],
+            "env": {
+                "MCPVAULT_READONLY": "false"
+            }
+        }
+    }
+}

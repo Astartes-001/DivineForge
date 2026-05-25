@@ -10,7 +10,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue)](https://python.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
 [![Stage](https://img.shields.io/badge/Stage-Early_Preview-orange)](#)
 
 > ⚠️ **起步阶段 · Early Stage** — 项目仍在活跃开发中，功能和稳定性持续迭代。欢迎 Star、Issue、PR！
@@ -190,7 +190,7 @@ DivineForge 站在以下开源项目的肩膀上 — *DivineForge is built on th
 
 ## 📄 License
 
-MIT
+Apache 2.0 — 保留版权、含专利授权、允许商用。
 
 ---
 

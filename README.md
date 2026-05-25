@@ -170,6 +170,21 @@ pyinstaller --onefile --windowed --add-data "pipeline-desk/dist;pipeline-desk/di
 
 ---
 
+## 🙏 构建于 · Built With
+
+DivineForge 站在以下开源项目的肩膀上 — *DivineForge is built on the shoulders of these open-source projects:*
+
+- [pywebview](https://github.com/r0x0r/pywebview) — 桌面窗口 · Desktop GUI shell
+- [React](https://github.com/facebook/react) — 前端 UI · Frontend framework
+- [Vite](https://github.com/vitejs/vite) — 构建工具 · Build tooling
+- [TypeScript](https://github.com/microsoft/TypeScript) — 类型安全 · Type safety
+- [PyInstaller](https://github.com/pyinstaller/pyinstaller) — EXE 打包 · Executable packaging
+- [DeepSeek](https://platform.deepseek.com/api-docs/) — AI 模型 · Language models
+- [GLM](https://open.bigmodel.cn/dev/api) — AI 模型 · Language models
+- [MBDyn](https://www.mbdyn.org/) — 多体动力学 · Multibody dynamics
+
+---
+
 ## 📄 License
 
 MIT

@@ -1,10 +1,12 @@
-# ⚙ IronMind — 工业设计 AI Pipeline
+# 🔨 DivineForge — 工业设计 AI Pipeline
+
+> *"神之火炉，锻造万物"*
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue)](https://python.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**IronMind** 是一个基于多 AI 模型协作的工业硬件设计自动化工作台。输入一个产品想法 → 自动完成从主题设计到交付的完整 6 阶段 Pipeline。
+**DivineForge** 是一个基于多 AI 模型协作的工业硬件设计自动化工作台。输入一个产品想法 → 自动完成从主题设计到交付的完整 6 阶段 Pipeline。
 
 ```
 你: "设计一台300×200mm桌面激光雕刻机"
@@ -69,7 +71,7 @@ pyinstaller --onefile --windowed --add-data "pipeline-desk/dist;pipeline-desk/di
 ## 📁 目录结构
 
 ```
-IronMind/
+DivineForge/
 ├── PipelineDesk.py          # 主程序（pywebview + Pipeline 引擎）
 ├── config/
 │   └── models.json          # AI 模型配置
@@ -110,4 +112,4 @@ MIT
 
 ---
 
-*Made with ⚙ in the forge of AI*
+*Forged in the fire of AI* 🔨

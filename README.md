@@ -181,6 +181,9 @@ DivineForge 站在以下开源项目的肩膀上 — *DivineForge is built on th
 - [PyInstaller](https://github.com/pyinstaller/pyinstaller) — EXE 打包 · Executable packaging
 - [DeepSeek](https://platform.deepseek.com/api-docs/) — AI 模型 · Language models
 - [GLM](https://open.bigmodel.cn/dev/api) — AI 模型 · Language models
+- [FreeCAD](https://www.freecad.org/) — 3D 建模与 FEA · 3D modeling & FEA
+- [KiCad](https://www.kicad.org/) — PCB 电子设计 · PCB electronic design
+- [OpenFOAM](https://www.openfoam.com/) — CFD 流体仿真 · Computational fluid dynamics
 - [MBDyn](https://www.mbdyn.org/) — 多体动力学 · Multibody dynamics
 
 ---

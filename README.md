@@ -10,6 +10,8 @@
 
 *DivineForge is a multi-model AI collaborative hardware design automation workbench. Input a product idea → automatically complete the full 6-phase design pipeline from concept to delivery.*
 
+> ⚠️ **起步阶段 · Early Stage** — 项目仍在活跃开发中，功能和稳定性持续迭代。欢迎 Star、Issue、PR！ · *This project is under active development. Features and stability are evolving. Stars, Issues, and PRs welcome!*
+
 ```
 你 · You: "设计一台300×200mm桌面激光雕刻机"
     │

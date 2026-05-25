@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivineForge · 八卦炉 — 系统架构图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a10;--panel-bg:#111118;--border:#1e1e2e;--text:#c4c4d0;
+  --accent:#6366f1;--phase0:#6366f1;--phase1:#8b5cf6;--phase2:#a855f7;
+  --phase3:#d946ef;--phase4:#ec4899;--phase5:#f43f5e;
+  --judge:#06b6d4;--clarify:#f59e0b;--chat:#10b981;
+  --model-dir:#6366f1;--model-eng:#8b5cf6;--model-rev:#d946ef;--model-cod:#f59e0b;
+}
+body{font-family:'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh}
+#app{display:flex;height:100vh}
+/* 左侧架构区 */
+#diagram{flex:1;position:relative;overflow:auto;background:radial-gradient(ellipse at 20% 50%,#1a1040 0%,var(--bg) 70%);cursor:grab}
+#diagram:active{cursor:grabbing}
+#diagram svg{display:block;min-width:1400px;min-height:1100px}
+/* 右侧面板 */
+#panel{width:380px;background:var(--panel-bg);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#panel-header{display:flex;border-bottom:1px solid var(--border)}
+.panel-tab{flex:1;padding:10px;text-align:center;font-size:12px;cursor:pointer;background:transparent;border:none;color:var(--text);border-bottom:2px solid transparent}
+.panel-tab.active{background:#1a1a2e;border-bottom-color:var(--accent);color:#fff}
+#panel-body{flex:1;overflow-y:auto;padding:12px}
+/* 模块详情卡片 */
+.mod-card{background:#181825;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px}
+.mod-card h3{font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.mod-card .badge{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600}
+.mod-card table{width:100%;font-size:10px;border-collapse:collapse}
+.mod-card td{padding:3px 4px;border-bottom:1px solid #1e1e2e}
+.mod-card td:first-child{color:#888;width:70px}
+/* 备注输入 */
+.note-area{width:100%;min-height:50px;margin-top:8px;padding:8px;font-size:10px;background:#0f0f1a;border:1px solid var(--border);border-radius:4px;color:var(--text);resize:vertical;font-family:inherit}
+.note-area:focus{outline:none;border-color:var(--accent)}
+.save-btn{padding:4px 12px;font-size:10px;border-radius:4px;border:none;cursor:pointer;background:var(--accent);color:#fff;margin-top:4px}
+/* 绘图工具栏 */
+#draw-tools{display:flex;gap:4px;padding:8px;border-top:1px solid var(--border)}
+.draw-btn{padding:6px 10px;font-size:11px;border-radius:4px;border:1px solid var(--border);background:#181825;color:var(--text);cursor:pointer}
+.draw-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.draw-btn.danger{color:#f87171}
+/* 绘图画布 */
+#draw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;display:none;flex-direction:column}
+#draw-overlay.show{display:flex}
+#draw-canvas{flex:1;cursor:crosshair}
+#draw-overlay .toolbar{display:flex;gap:4px;padding:8px;background:#111}
+/* SVG 节点交互 */
+.node-group{cursor:pointer}
+.node-group:hover rect{filter:brightness(1.3)}
+/* Tooltip */
+.tooltip{position:fixed;pointer-events:none;background:#1e1e2e;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:11px;color:#fff;z-index:100;opacity:0;transition:opacity .2s;max-width:220px}
+.tooltip.show{opacity:1}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 架构图 -->
+  <div id="diagram">
+    <svg id="svg-main" viewBox="0 0 1440 1150"></svg>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <!-- 右侧面板 -->
+  <div id="panel">
+    <div id="panel-header">
+      <button class="panel-tab active" data-tab="modules">模块</button>
+      <button class="panel-tab" data-tab="notes">备注</button>
+      <button class="panel-tab" data-tab="all">全部</button>
+    </div>
+    <div id="panel-body"></div>
+    <div id="draw-tools">
+      <button class="draw-btn" onclick="toggleDraw()">🎨 图画</button>
+      <button class="draw-btn" onclick="exportNotes()">📥 导出备注</button>
+      <button class="draw-btn" onclick="saveAll()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 绘图层 -->
+<div id="draw-overlay">
+  <div class="toolbar">
+    <button class="draw-btn active" data-tool="pen" onclick="setTool('pen',this)">✏️ 笔</button>
+    <button class="draw-btn" data-tool="eraser" onclick="setTool('eraser',this)">🧹 橡皮</button>
+    <button class="draw-btn" data-tool="rect" onclick="setTool('rect',this)">⬜ 矩形</button>
+    <button class="draw-btn" data-tool="circle" onclick="setTool('circle',this)">⭕ 圆</button>
+    <input type="color" id="draw-color" value="#6366f1" style="width:30px;height:30px;border:none;cursor:pointer">
+    <input type="range" id="draw-size" min="1" max="10" value="3" style="width:80px">
+    <button class="draw-btn danger" onclick="clearDraw()">🗑 清除</button>
+    <button class="draw-btn" onclick="toggleDraw()">✅ 完成</button>
+  </div>
+  <canvas id="draw-canvas"></canvas>
+</div>
+
+<script>
+// ============ 架构数据 ============
+const MODULES = {
+  // ── 用户交互层 ──
+  L0_user:{id:'L0',x:20,y:30,w:210,h:120,color:'#334155',label:'👤 用户交互 · User',items:[
+    {id:'inp',label:'💬 输入框',desc:'自然语言文本输入'},
+    {id:'cards',label:'📋 选择卡片',desc:'多选题澄清交互'},
+    {id:'chat',label:'💭 对话区',desc:'多轮对话显示'},
+    {id:'steps',label:'📊 步骤面板',desc:'实时思考流式显示'},
+  ]},
+
+  // ── 判断层 ──
+  L1_judge:{id:'L1',x:270,y:30,w:200,h:120,color:'#164e63',label:'🔍 判断层 · Judge',items:[
+    {id:'judge',label:'意图判断',desc:'chat/vague/specific',model:'GLM-5.1'},
+    {id:'chat_r',label:'聊天回复',desc:'非设计内容直接回复'},
+    {id:'clarify',label:'需求澄清',desc:'生成多选题'},
+    {id:'dispatch',label:'Pipeline 调度',desc:'启动 6 Phase'},
+  ]},
+
+  // ── Pipeline 6 Phase ──
+  L2_pipeline:{id:'L2',x:520,y:30,w:300,h:120,color:'#1e1b4b',label:'⚙ Pipeline 6 Phase',items:[
+    {id:'p0',label:'Phase 0 · 主题设计',desc:'产品定位/竞品/设计语言',model:'GLM-5.1',color:'var(--phase0)'},
+    {id:'p1',label:'Phase 1 · 详细设计',desc:'选材/传动/尺寸/MCU',model:'GLM-5.1',color:'var(--phase1)'},
+    {id:'p2',label:'Phase 2 · 执行 ⚡',desc:'★ 3D建模/电路/编程',model:'DS V4 Flash',color:'var(--phase2)',sub:true},
+    {id:'p3',label:'Phase 3 · 视觉初审',desc:'只描述问题/不判断',model:'GLM-5V-Turbo',color:'var(--phase3)'},
+    {id:'p4',label:'Phase 4 · 审核决策',desc:'pass/fix/redo 门禁',model:'GLM-5.1',color:'var(--phase4)'},
+    {id:'p5',label:'Phase 5 · 最终交付',desc:'机械/电子/固件/报告',model:'GLM-5.1',color:'var(--phase5)'},
+  ]},
+
+  // ── Sub-Agent ──
+  L3_sub:{id:'L3',x:650,y:200,w:300,h:100,color:'#4a1d5a',label:'🔧 Phase 2 Sub-Agents',items:[
+    {id:'sa1',label:'🔧 3D建模',desc:'FreeCAD 参数/装配/STEP',model:'FreeCAD'},
+    {id:'sa2',label:'⚡ 电路设计',desc:'KiCad 原理图/PCB/BOM',model:'KiCad'},
+    {id:'sa3',label:'💻 嵌入式编程',desc:'引脚分配/固件代码',model:'Arduino/STM32'},
+  ]},
+
+  // ── AI 模型层 ──
+  L4_models:{id:'L4',x:20,y:200,w:200,h:150,color:'#312e81',label:'🧠 AI 模型矩阵',items:[
+    {id:'m1',label:'👑 设计总监',desc:'需求判断/设计/审核',model:'GLM-5.1 智谱'},
+    {id:'m2',label:'🔧 设计工程师',desc:'执行阶段流式',model:'DeepSeek V4 Flash'},
+    {id:'m3',label:'👁️ 视觉质检师',desc:'多模态截图审核',model:'GLM-5V-Turbo'},
+    {id:'m4',label:'💻 嵌入式工程师',desc:'固件代码生成',model:'DeepSeek V4 Pro'},
+  ]},
+
+  // ── MCP 工具层 ──
+  L5_mcp:{id:'L5',x:280,y:200,w:200,h:150,color:'#172554',label:'🔌 MCP 工程工具',items:[
+    {id:'t1',label:'freecad_mcp',desc:'3D建模/FEA仿真',app:'FreeCAD'},
+    {id:'t2',label:'kicad_mcp',desc:'原理图/PCB/DRC',app:'KiCad'},
+    {id:'t3',label:'openfoam_mcp',desc:'CFD流体仿真',app:'OpenFOAM'},
+    {id:'t4',label:'mbdyn_mcp',desc:'多体运动学',app:'MBDyn'},
+    {id:'t5',label:'obsidian_mcp',desc:'知识库读写',app:'Obsidian'},
+  ]},
+
+  // ── 数据层 ──
+  L6_data:{id:'L6',x:530,y:200,w:180,h:120,color:'#1a2e1a',label:'💾 数据层 · Storage',items:[
+    {id:'d1',label:'📁 sessions/',desc:'JSON 会话记录'},
+    {id:'d2',label:'📁 knowledge/',desc:'知识库 MD 文件'},
+    {id:'d3',label:'📁 config/',desc:'模型/工具配置'},
+    {id:'d4',label:'📁 dist/',desc:'PyInstaller 打包'},
+  ]},
+
+  // ── 前端技术栈 ──
+  L7_frontend:{id:'L7',x:20,y:400,w:280,h:100,color:'#1e293b',label:'📱 前端技术栈 · Frontend',items:[
+    {id:'f1',label:'React 18',desc:'UI 框架 | TypeScript'},
+    {id:'f2',label:'Vite',desc:'构建工具 | HMR'},
+    {id:'f3',label:'pywebview',desc:'WebView2 桌面壳'},
+    {id:'f4',label:'PyInstaller',desc:'onefile EXE 打包'},
+  ]},
+
+  // ── 流程控制 ──
+  L8_flow:{id:'L8',x:340,y:380,w:300,h:120,color:'#2d1b1b',label:'🔄 流程控制 · Flow Control',items:[
+    {id:'fl1',label:'审核回退',desc:'Phase 4 → Phase 0 重做(≤2轮)'},
+    {id:'fl2',label:'会话隔离',desc:'每请求一个 JSON 文件'},
+    {id:'fl3',label:'流式输出',desc:'ref DOM 直接写入'},
+    {id:'fl4',label:'停止控制',desc:'_stop_flag 安全中断'},
+  ]},
+
+  // ── 通信层 ──
+  L9_comms:{id:'L9',x:700,y:380,w:200,h:100,color:'#1e1b2d',label:'📡 通信层 · Comms',items:[
+    {id:'c1',label:'HTTP/SSE 流式',desc:'chunk 30ms 间隔'},
+    {id:'c2',label:'JS Bridge',desc:'pywebview JS API'},
+    {id:'c3',label:'poll_events()',desc:'100ms 轮询事件'},
+  ]},
+};
+
+// ============ SVG 绘制 ============
+const ns='http://www.w3.org/2000/svg';
+const SVG=(tag,attrs={})=>{const e=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);return e;};
+
+function drawArchitecture(){
+  const svg=document.getElementById('svg-main');
+  svg.innerHTML='';
+
+  // 连接线
+  const lines=[
+    {x1:230,y1:70,x2:270,y2:70,color:'#475569',label:'输入'},
+    {x1:470,y1:70,x2:520,y2:70,color:'#6366f1',label:'特定需求'},
+    {x1:340,y1:120,x2:340,y2:160,color:'#475569',label:'模糊→澄清'},
+    {x1:520,y1:250,x2:530,y2:250,color:'#8b5cf6'},
+    {x1:900,y1:70,x2:1100,y2:70,color:'#22c55e',label:'pass →'},
+    {x1:900,y1:100,x2:520,y2:100,color:'#ef4444',label:'← redo',dashed:true},
+  ];
+
+  lines.forEach(l=>{
+    const path=SVG('path',{
+      d:`M${l.x1} ${l.y1} L${l.x2} ${l.y2}`,
+      stroke:l.color,strokeWidth:2,
+      strokeDasharray:l.dashed?'6 4':'none',
+      fill:'none',opacity:.6,
+    });
+    svg.appendChild(path);
+    if(l.label){
+      const t=SVG('text',{x:(l.x1+l.x2)/2,y:l.y1-8,'text-anchor':'middle',fill:l.color,'font-size':'9'});
+      t.textContent=l.label;
+      svg.appendChild(t);
+    }
+  });
+
+  // 模块盒子
+  Object.values(MODULES).forEach(m=>{
+    const g=SVG('g',{class:'node-group','data-id':m.id});
+    g.innerHTML=`
+      <rect x="${m.x}" y="${m.y}" width="${m.w}" height="${m.h}" rx="8"
+            fill="${m.color}" stroke="${m.color}" stroke-width="1" opacity="0.85"/>
+      <text x="${m.x+10}" y="${m.y+20}" fill="#fff" font-size="12" font-weight="600">${m.label}</text>
+      ${m.items.map((it,i)=>{
+        const ix=m.x+10;
+        const iy=m.y+35+i*20;
+        const dot=it.color||m.color;
+        return `<circle cx="${ix+5}" cy="${iy-2}" r="3" fill="${dot}" opacity="0.8"/>
+                <text x="${ix+14}" y="${iy+3}" fill="#c4c4d0" font-size="10">${it.label||it}</text>`;
+      }).join('')}
+    `;
+    g.addEventListener('click',()=>showDetail(m));
+    g.addEventListener('mouseenter',(e)=>showTooltip(e,m));
+    g.addEventListener('mouseleave',()=>hideTooltip());
+    svg.appendChild(g);
+  });
+
+  // 图例
+  const legend=SVG('g',{transform:'translate(1000,20)'});
+  legend.innerHTML=`
+    <rect x="0" y="0" width="180" height="130" rx="6" fill="#111118" stroke="#1e1e2e" stroke-width="1"/>
+    <text x="10" y="20" fill="#fff" font-size="11" font-weight="600">图例 · Legend</text>
+    <line x1="10" y1="40" x2="40" y2="40" stroke="#6366f1" stroke-width="2"/>
+    <text x="50" y="44" fill="#94a3b8" font-size="9">Pipeline Phase</text>
+    <line x1="10" y1="60" x2="40" y2="60" stroke="#06b6d4" stroke-width="2"/>
+    <text x="50" y="64" fill="#94a3b8" font-size="9">判断/澄清</text>
+    <line x1="10" y1="80" x2="40" y2="80" stroke="#22c55e" stroke-width="2"/>
+    <text x="50" y="84" fill="#94a3b8" font-size="9">通过/交付</text>
+    <line x1="10" y1="100" x2="40" y2="100" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="50" y="104" fill="#94a3b8" font-size="9">回退/重做</text>
+  `;
+  svg.appendChild(legend);
+}
+
+// ============ 右侧面板 ============
+let currentTab='modules';
+
+function showDetail(mod){
+  document.querySelectorAll('.panel-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===currentTab));
+  const body=document.getElementById('panel-body');
+  if(currentTab==='modules'||currentTab==='all'){
+    body.innerHTML=renderModDetail(mod)+(currentTab==='all'?renderNotes(mod):'');
+  }else{
+    body.innerHTML=renderNotes(mod);
+  }
+  // 恢复已保存备注
+  loadNotes(mod.id);
+}
+
+function renderModDetail(m){
+  return `
+    <div class="mod-card">
+      <h3>${m.label}</h3>
+      <table>${m.items.map(it=>`
+        <tr><td>${it.label||it}</td><td>${it.desc||''}${it.model?' · <span style="color:#818cf8">'+it.model+'</span>':''}${it.app?' · <span style="color:#fbbf24">'+it.app+'</span>':''}</td></tr>
+      `).join('')}</table>
+    </div>`;
+}
+
+function renderNotes(m){
+  return `
+    <div class="mod-card">
+      <h3>📝 备注 · ${m.label}</h3>
+      <textarea class="note-area" id="note-${m.id}" placeholder="写备注...">${loadNoteText(m.id)}</textarea>
+      <button class="save-btn" onclick="saveNote('${m.id}')">💾 保存备注</button>
+    </div>`;
+}
+
+// ============ 备注存储 ============
+function loadNoteText(id){ return localStorage.getItem('df_note_'+id)||''; }
+function loadNotes(id){
+  const ta=document.getElementById('note-'+id);
+  if(ta) ta.value=loadNoteText(id);
+}
+function saveNote(id){
+  const ta=document.getElementById('note-'+id);
+  if(ta) localStorage.setItem('df_note_'+id,ta.value);
+}
+
+// ============ 绘图 ============
+let drawTool='pen',drawColor='#6366f1',drawSize=3,drawing=false;
+let drawData=[];
+
+function initDraw(){
+  const c=document.getElementById('draw-canvas');
+  c.width=window.innerWidth;c.height=window.innerHeight;
+  const ctx=c.getContext('2d');
+  // 恢复保存的绘图
+  const saved=localStorage.getItem('df_drawing');
+  if(saved){
+    const img=new Image();
+    img.onload=()=>ctx.drawImage(img,0,0);
+    img.src=saved;
+  }
+  c.onmousedown=e=>{drawing=true;draw(e,ctx)};
+  c.onmouseup=()=>{drawing=false;ctx.beginPath();saveDrawing(c)};
+  c.onmousemove=e=>drawing&&draw(e,ctx);
+  c.onmouseleave=()=>{drawing=false;ctx.beginPath();saveDrawing(c)};
+}
+function draw(e,ctx){
+  ctx.strokeStyle=drawTool==='eraser'?'#000':drawColor;
+  ctx.lineWidth=drawTool==='eraser'?drawSize*3:drawSize;
+  ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(e.offsetX,e.offsetY);
+  ctx.lineTo(e.offsetX+0.1,e.offsetY+0.1);
+  ctx.stroke();
+}
+function saveDrawing(c){localStorage.setItem('df_drawing',c.toDataURL())}
+function clearDraw(){
+  const c=document.getElementById('draw-canvas');
+  c.getContext('2d').clearRect(0,0,c.width,c.height);
+  localStorage.removeItem('df_drawing');
+}
+function toggleDraw(){
+  document.getElementById('draw-overlay').classList.toggle('show');
+  if(document.getElementById('draw-overlay').classList.contains('show')) initDraw();
+}
+function setTool(tool,btn){
+  drawTool=tool;
+  document.querySelectorAll('#draw-overlay .draw-btn[data-tool]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+document.getElementById('draw-color').onchange=function(){drawColor=this.value};
+document.getElementById('draw-size').onchange=function(){drawSize=parseInt(this.value)};
+
+// ============ 全部保存 ============
+function saveAll(){
+  // 保存所有模块的备注
+  Object.keys(MODULES).forEach(id=>{
+    const ta=document.getElementById('note-'+id);
+    if(ta) localStorage.setItem('df_note_'+id,ta.value);
+  });
+  // 保存绘图
+  const c=document.getElementById('draw-canvas');
+  if(c.width>0) localStorage.setItem('df_drawing',c.toDataURL());
+  alert('✅ 所有备注和绘图已保存到浏览器本地存储');
+}
+
+// ============ 导出 ============
+function exportNotes(){
+  let md='# DivineForge · 八卦炉 — 备注文档\n\n';
+  md+=`导出时间: ${new Date().toLocaleString()}\n\n`;
+  Object.values(MODULES).forEach(m=>{
+    const note=loadNoteText(m.id);
+    if(note){
+      md+=`## ${m.label}\n\n${note}\n\n---\n\n`;
+    }
+  });
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='DivineForge_notes.md';
+  a.click();
+}
+
+// ============ 工具提示 ============
+function showTooltip(e,mod){
+  const t=document.getElementById('tooltip');
+  t.innerHTML=`<strong>${mod.label}</strong><br><span style="color:#94a3b8;font-size:10px">${mod.items.length} 个子模块 · 点击查看详情</span>`;
+  t.style.left=e.clientX+15+'px';
+  t.style.top=e.clientY+15+'px';
+  t.classList.add('show');
+}
+function hideTooltip(){document.getElementById('tooltip').classList.remove('show')}
+
+// ============ Tab 切换 ============
+document.querySelectorAll('.panel-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    currentTab=btn.dataset.tab;
+    document.querySelectorAll('.panel-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-body').innerHTML='<div style="padding:40px;text-align:center;color:#64748b;font-size:11px">点击左侧架构图的任意模块查看详情</div>';
+  });
+});
+
+// ============ 全局点击 ============
+document.getElementById('svg-main').addEventListener('click',(e)=>{
+  if(e.target.closest('.node-group')) return;
+  const body=document.getElementById('panel-body');
+  body.innerHTML=`<div style="padding:40px;text-align:center;color:#64748b">
+    <div style="font-size:40px;margin-bottom:12px">🔨</div>
+    <div style="font-size:14px;color:#fff;margin-bottom:8px">DivineForge · 八卦炉</div>
+    <div style="font-size:11px;line-height:1.8">
+      点击架构图中的模块查看详情<br>
+      在备注区写笔记，用 🎨 按钮绘图<br>
+      所有内容保存在浏览器本地
+    </div>
+    <div style="margin-top:16px;font-size:10px;color:#475569">
+      10 个架构模块 · 4 个 AI 模型 · 5 个 MCP 工具 · 6 个 Pipeline Phase
+    </div>
+  </div>`;
+});
+
+// ============ 初始化 ============
+drawArchitecture();
+document.getElementById('panel-body').innerHTML=`<div style="padding:40px;text-align:center;color:#64748b">
+  <div style="font-size:40px;margin-bottom:12px">🔨</div>
+  <div style="font-size:14px;color:#fff;margin-bottom:8px">DivineForge · 八卦炉</div>
+  <div style="font-size:11px;line-height:1.8">
+    点击架构图中的模块查看详情<br>在备注区写笔记，用 🎨 按钮绘图<br>所有内容保存在浏览器本地
+  </div>
+</div>`;
+</script>
+</body>
+</html>

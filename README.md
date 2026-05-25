@@ -4,7 +4,7 @@
 
 ---
 
-# 🔨 DivineForge
+# 🔨 DivineForge · 八卦炉
 
 > *"神之火炉，锻造万物" — "Forged in the divine fire"*
 

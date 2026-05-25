@@ -597,7 +597,7 @@ class Api:
 
     def get_vault_knowledge(self):
         """获取知识库摘要"""
-        kb = PROJECT_DIR / "PipelineVault" / "06_知识库"
+        kb = PROJECT_DIR / "PipelineVault" / "knowledge"
         files = list(kb.glob("*.md"))
         result = []
         for f in files:
